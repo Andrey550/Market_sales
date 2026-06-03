@@ -1,0 +1,20 @@
+{
+  "name": "websales",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker for browsing grocery promotions from Silpo, Novus, and Fora.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "test": "node --test tests/**/*.test.js",
+    "check": "node --check src/index.js && node --check src/page.js && node --check src/catalog-utils.js && node --check src/utils/fetch.js && node --check src/utils/cache.js && node --check src/utils/logger.js && node --check src/utils/retry.js && node --check src/providers/rpc-adapter.js && node --check src/providers/silpo.js && node --check src/providers/novus.js && node --check src/providers/fora.js",
+    "deploy": "wrangler deploy"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

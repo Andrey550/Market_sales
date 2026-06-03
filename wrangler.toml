@@ -1,0 +1,11 @@
+name = "websales"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+SILPO_FILIAL_ID = "2028"
+SILPO_DELIVERY_TYPE = "DeliveryHome"
+FORA_FILIAL_ID = "310"
+FORA_MERCHANT_ID = "2"
+FORA_DELIVERY_TYPE = "2"
+NOVUS_STORE_ID = "482010105"
