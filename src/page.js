@@ -3,936 +3,568 @@ export const HTML_PAGE = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebSales - Парсер продуктів</title>
+  <title>WebSales · Система пошуку акцій</title>
   <style>
     :root {
-      color-scheme: light;
-      --bg-page: #F7F8FA;
-      --bg-page-accent: radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 32%);
-      --bg-panel: rgba(255,255,255,0.9);
-      --bg-card: #FFFFFF;
-      --bg-card-secondary: #F1F3F5;
-      --bg-card-hover: #F9FAFB;
-      --text-main: #1F2933;
-      --text-secondary: #6B7280;
-      --text-muted: #9CA3AF;
-      --accent-primary: #3B82F6;
-      --accent-primary-hover: #2563EB;
-      --accent-success: #22C55E;
-      --accent-warning: #F59E0B;
-      --accent-error: #EF4444;
-      --divider: #E2E5E9;
-      --divider-strong: #D1D5DB;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.07);
-      --shadow-lg: 0 10px 30px rgba(0,0,0,0.08);
-      --btn-shadow: 0 6px 16px rgba(59,130,246,0.18);
-      --focus-ring: rgba(59,130,246,0.15);
+      --bg-primary: #121315;
+      --bg-card: #1A1C1E;
+      --bg-card-hover: #1F2123;
+      --border-card: #2B2E33;
+      --text-primary: #F3F4F6;
+      --text-secondary: #8A9099;
+      --text-muted: #5E646E;
 
-      --font-size-sm: 12px;
-      --font-size-base: 14px;
-      --font-size-md: 16px;
-      --font-size-lg: 18px;
+      --store-silpo: #4A5D47;
+      --store-silpo-soft: rgba(74, 93, 71, 0.15);
+      --store-novus: #C99A4E;
+      --store-novus-soft: rgba(201, 154, 78, 0.15);
+      --store-fora: #4C6A80;
+      --store-fora-soft: rgba(76, 106, 128, 0.15);
 
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 12px;
-      --radius-xl: 20px;
-      --radius-pill: 999px;
+      --discount-low: #5E646E;
+      --discount-mid: #C99A4E;
+      --discount-hot: #B86B5C;
 
-      --duration-fast: 120ms;
-      --duration-normal: 160ms;
-      --duration-slow: 240ms;
-      --easing-out: cubic-bezier(.22,.9,.35,1);
+      --action-primary: #3F4F41;
+      --action-primary-hover: rgba(63, 79, 65, 0.8);
+      --action-danger: #B86B5C;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: var(--bg-page-accent), var(--bg-page);
-      color: var(--text-main);
-      font-size: var(--font-size-base);
-      line-height: 1.5;
+    html, body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    body { padding: 0; }
+
+    /* === Layout === */
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
+      background: var(--bg-primary);
+      border-left: 1px solid rgba(43, 46, 51, 0.2);
+      border-right: 1px solid rgba(43, 46, 51, 0.2);
     }
 
-    h1 {
-      font-size: 28px;
-      font-weight: 600;
-      line-height: 1.2;
-      color: var(--text-main);
-      margin-right: 16px;
-      white-space: nowrap;
-      letter-spacing: -0.02em;
-    }
-
-    /* === Header & Panels === */
-    .header {
-      background-color: var(--bg-panel);
-      backdrop-filter: blur(12px);
-      padding: 20px 24px;
-      border: 1px solid rgba(255,255,255,0.72);
-      border-radius: var(--radius-xl);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+    .app-header {
       position: sticky;
-      top: 20px;
-      z-index: 100;
-      box-shadow: var(--shadow-md);
+      top: 0;
+      z-index: 40;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-card);
+      padding: 12px 16px;
     }
 
-    .header__top {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-    }
-
-    .header__toggle {
-      display: none;
-      margin-left: auto;
-      padding: 10px 14px;
-    }
-
-    .header__toggle-icon {
-      width: 16px;
-      height: 16px;
-      transition: transform var(--duration-normal) var(--easing-out);
-    }
-
-    .header__controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      flex: 1;
-    }
-
-    .header__search {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-left: auto;
-      padding: 6px;
-      background: var(--bg-card-secondary);
-      border: 1px solid var(--divider);
-      border-radius: 14px;
-    }
-
-    .filters-panel {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
-      padding: 16px 18px;
-      background: var(--bg-card-secondary);
-      border: 1px solid var(--divider);
-      border-radius: 16px;
-    }
-
-    .filter-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: var(--font-size-base);
-      color: var(--text-main);
-    }
-    .filter-item label {
-      white-space: nowrap;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-
-    /* === Inputs & Selects === */
-    .input {
-      background-color: var(--bg-card);
-      border: 1px solid var(--divider-strong);
-      border-radius: 8px;
-      padding: 10px 12px;
-      color: var(--text-main);
-      font-family: inherit;
-      font-size: var(--font-size-base);
-      outline: none;
-      transition: border-color var(--duration-normal) var(--easing-out), box-shadow var(--duration-normal) var(--easing-out), background-color var(--duration-normal) var(--easing-out);
-      min-width: 160px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
-    }
-    .input::placeholder {
+    .app-title {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
       color: var(--text-secondary);
+      margin-bottom: 4px;
     }
-    .input:focus {
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 3px var(--focus-ring);
+    .app-title strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    .app-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
     }
 
-    input[type="range"] {
-      cursor: pointer;
-      accent-color: var(--accent-primary);
+    /* === Filters === */
+    .filters {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
     }
 
-    /* === Buttons === */
-    .btn {
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      border: none;
-      outline: none;
-      border-radius: 8px;
-      padding: 10px 16px;
-      font-family: inherit;
-      font-size: var(--font-size-base);
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 150ms var(--easing-out), transform 150ms var(--easing-out), box-shadow 160ms var(--easing-out), color 150ms var(--easing-out), border-color 150ms var(--easing-out);
-      white-space: nowrap;
-      gap: 8px;
-    }
-    .btn:disabled {
-      opacity: 0.5;
-      pointer-events: none;
-    }
-
-    .btn--primary {
-      background-color: var(--accent-primary);
-      color: #fff;
-      box-shadow: var(--shadow-sm);
-    }
-    .btn--primary:hover {
-      background-color: var(--accent-primary-hover);
-      transform: translateY(-1px);
-      box-shadow: var(--btn-shadow);
-    }
-    .btn--primary:focus-visible {
-      outline: 2px solid var(--focus-ring);
-      outline-offset: 2px;
-    }
-
-    .btn--secondary {
-      background-color: var(--bg-card-secondary);
-      border: 1px solid var(--divider);
-      color: var(--text-main);
-      box-shadow: var(--shadow-sm);
-    }
-    .btn--secondary:hover {
-      background-color: #E8EBEF;
-    }
-    .btn--secondary:focus-visible {
-      outline: 2px solid var(--focus-ring);
-      outline-offset: 2px;
-    }
-
-    .btn--ghost {
-      background-color: transparent;
-      color: var(--accent-primary);
+      gap: 6px;
       padding: 6px 12px;
-      border-radius: var(--radius-sm);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-card);
+      border-radius: 999px;
+      font-size: 12px;
       font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
     }
-    .btn--ghost:hover {
-      text-decoration: none;
-      background-color: rgba(59,130,246,0.08);
+    .filter-chip:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
     }
-    .btn--ghost:focus-visible {
-      outline: 2px solid var(--focus-ring);
-      outline-offset: 2px;
+    .filter-chip.active {
+      background: var(--action-primary);
+      border-color: var(--action-primary);
+      color: var(--text-primary);
+    }
+    .filter-chip[data-store="silpo"].active {
+      background: var(--store-silpo);
+      border-color: var(--store-silpo);
+    }
+    .filter-chip[data-store="novus"].active {
+      background: var(--store-novus);
+      border-color: var(--store-novus);
+      color: #1A1C1E;
+    }
+    .filter-chip[data-store="fora"].active {
+      background: var(--store-fora);
+      border-color: var(--store-fora);
+    }
+    .filter-chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
     }
 
-    /* === Multiselect Dropdowns === */
-    .multiselect {
-      position: relative;
-      min-width: 200px;
-      max-width: 320px;
+    .filter-input {
+      flex: 1;
+      min-width: 120px;
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.15s ease;
     }
-    .multiselect-btn {
-      width: 100%;
-      text-align: left;
-      background-color: var(--bg-card);
-      color: var(--text-main);
-      border: 1px solid var(--divider-strong);
-      padding: 10px 12px;
-      border-radius: 8px;
+    .filter-input::placeholder { color: rgba(138, 144, 153, 0.5); }
+    .filter-input:focus { outline: none; border-color: var(--action-primary); }
+
+    .filter-range {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex: 1;
+      min-width: 150px;
+    }
+    .filter-range-sep { color: var(--text-muted); font-size: 12px; }
+
+    .btn-primary {
+      flex: 1;
+      padding: 10px 16px;
+      background: var(--action-primary);
+      border: none;
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .btn-primary:hover { background: var(--action-primary-hover); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .filter-toggle {
+      display: none;
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 420px) {
+      .filter-toggle { display: block; }
+      .filters.collapsed { display: none; }
+    }
+
+    /* === Status bar === */
+    .status-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: border-color var(--duration-normal) var(--easing-out), box-shadow var(--duration-normal) var(--easing-out), background-color var(--duration-normal) var(--easing-out);
-      white-space: nowrap;
-      overflow: hidden;
-      font-size: var(--font-size-base);
-      font-weight: 400;
-      box-shadow: var(--shadow-sm);
+      padding: 10px 16px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-bottom: 1px solid var(--border-card);
     }
-    .multiselect-btn:disabled {
+    .status-bar strong { color: var(--text-primary); font-weight: 600; }
+    .status-error { color: var(--discount-hot); }
+
+    /* === Product cards === */
+    .products {
+      padding: 8px 12px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .product-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+    .product-card:hover { background: var(--bg-card-hover); }
+    .product-card[data-store="Сільпо"] { border-left: 3px solid var(--store-silpo); }
+    .product-card[data-store="Новус"]  { border-left: 3px solid var(--store-novus); }
+    .product-card[data-store="Фора"]   { border-left: 3px solid var(--store-fora); }
+
+    .product-image {
+      flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 10px;
+      background: var(--bg-primary);
+      object-fit: cover;
+    }
+    .product-image-placeholder {
+      flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 10px;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
       color: var(--text-muted);
-      cursor: not-allowed;
-      background-color: var(--bg-card-secondary);
-    }
-    .multiselect-btn:focus-visible, .multiselect.open .multiselect-btn {
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 3px var(--focus-ring);
-    }
-    .multiselect-dropdown {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      right: 0;
-      background-color: var(--bg-card);
-      border: 1px solid var(--divider);
-      border-radius: var(--radius-lg);
-      max-height: 320px;
-      overflow-y: auto;
-      display: none;
-      z-index: 100;
-      box-shadow: var(--shadow-lg);
-    }
-    .multiselect.open .multiselect-dropdown {
-      display: block;
-      animation: dropdownOpen var(--duration-fast) var(--easing-out);
-    }
-    @keyframes dropdownOpen {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
     }
 
-    .dropdown-search {
-      padding: 8px;
-      position: sticky;
-      top: 0;
-      background-color: var(--bg-card);
-      z-index: 2;
-      border-bottom: 1px solid var(--divider);
-    }
-    .dropdown-search .input {
-      width: 100%;
+    .product-body {
+      flex: 1;
       min-width: 0;
-      padding: 8px 10px;
-      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
-    .store-header {
-      padding: 8px 12px;
+    .product-name {
+      font-size: 13px;
       font-weight: 600;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--divider);
-      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .product-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .product-store-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .checkbox-pill.select-all-row {
-      font-weight: 600;
-      color: var(--text-main);
-      border-bottom: 1px solid var(--divider);
-      background-color: var(--bg-card-secondary);
-    }
-    .checkbox-pill.select-all-row:hover {
-      background-color: var(--bg-card-hover);
+    .product-store-badge.silpo { background: var(--store-silpo-soft); color: var(--store-silpo); }
+    .product-store-badge.novus { background: var(--store-novus-soft); color: var(--store-novus); }
+    .product-store-badge.fora  { background: var(--store-fora-soft);  color: var(--store-fora); }
+    .product-category {
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    /* === Checkboxes === */
-    .checkbox-pill {
+    .product-footer {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 12px;
-      cursor: pointer;
-      transition: background-color var(--duration-fast) var(--easing-out);
-      color: var(--text-main);
-      font-size: var(--font-size-base);
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 4px;
+      gap: 8px;
     }
-    .checkbox-pill:hover {
-      background-color: var(--bg-card-hover);
+    .product-price {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
     }
-    .checkbox-pill input,
-    .checkbox-square {
-      appearance: none;
-      -webkit-appearance: none;
-      width: 18px;
-      height: 18px;
-      min-width: 18px;
-      border-radius: 6px;
-      background-color: var(--bg-card);
-      border: 2px solid var(--divider-strong);
-      cursor: pointer;
-      position: relative;
-      transition: all 180ms ease;
-      display: grid;
-      place-content: center;
-      margin: 0;
-    }
-    .checkbox-pill input:hover,
-    .checkbox-square:hover {
-      border-color: var(--accent-primary);
-    }
-    .checkbox-pill input::before,
-    .checkbox-square::before {
-      content: "";
-      width: 10px;
-      height: 10px;
-      background-color: white;
-      clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-      transform: scale(0);
-      transition: transform 180ms var(--easing-out);
-    }
-    .checkbox-pill input:checked,
-    .checkbox-square:checked {
-      background-color: var(--accent-primary);
-      border-color: var(--accent-primary);
-    }
-    .checkbox-pill input:checked::before,
-    .checkbox-square:checked::before {
-      transform: scale(1);
-    }
-    .checkbox-pill input:focus-visible,
-    .checkbox-square:focus-visible {
-      box-shadow: 0 0 0 3px var(--focus-ring);
-    }
-    .checkbox-pill input:disabled,
-    .checkbox-square:disabled {
-      background-color: var(--bg-card-secondary);
-      border-color: var(--divider);
-    }
-    .checkbox-pill input:disabled::before,
-    .checkbox-square:disabled::before {
-      background-color: var(--text-muted);
-    }
-
-    /* === Table === */
-    .table-wrap {
-      flex: 1;
-      padding: 20px 0 0;
-      overflow-x: auto;
-      background: var(--bg-card);
-      border: 1px solid var(--divider);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-md);
-      margin-top: 20px;
-    }
-    .table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: 13px;
-      margin: 0;
-    }
-    .table th, .table td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--divider);
-      vertical-align: middle;
-    }
-    .table th {
-      background-color: var(--bg-page);
-      color: #374151;
-      font-weight: 500;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      cursor: pointer;
-      user-select: none;
-      transition: background-color var(--duration-fast);
-      white-space: nowrap;
-    }
-    .table th:hover {
-      background-color: var(--bg-card-secondary);
-    }
-    .table th:first-child {
-      border-top-left-radius: var(--radius-md);
-    }
-    .table th:last-child {
-      border-top-right-radius: var(--radius-md);
-    }
-
-    .sort-icon {
-      width: 16px;
-      height: 16px;
-      margin-left: 6px;
-      stroke: currentColor;
-      opacity: 0.3;
-      transition: opacity 0.2s, transform 0.2s;
-      vertical-align: text-bottom;
-      display: inline-block;
-    }
-    .table th.sorted .sort-icon {
-      opacity: 1;
-      color: var(--accent-primary);
-    }
-    .table th.sorted.asc .sort-icon {
-      transform: rotate(180deg);
-    }
-
-    .table tbody tr {
-      background-color: transparent;
-      transition: background-color var(--duration-fast);
-    }
-    .table tbody tr:hover {
-      background-color: var(--bg-card-hover);
-    }
-    .table tbody tr.selected {
-      background-color: rgba(59,130,246,0.08);
-      position: relative;
-    }
-    .table tbody tr.selected td:first-child::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 3px;
-      background-color: var(--accent-primary);
-    }
-
-    .table td.price {
-      color: var(--accent-success);
-      font-weight: 600;
-      white-space: nowrap;
-      text-align: right;
-    }
-    .table td.old-price {
+    .price-current { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .price-old {
+      font-size: 11px;
       color: var(--text-muted);
       text-decoration: line-through;
-      white-space: nowrap;
-      text-align: right;
     }
-    .table td.discount {
+    .price-unit { font-size: 10px; color: var(--text-muted); margin-left: 2px; }
+
+    .product-discount {
+      font-size: 11px;
       font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--discount-low);
+      color: var(--text-primary);
       white-space: nowrap;
-      text-align: right;
     }
-    .table td.discount.has {
-      color: var(--accent-success);
+    .product-discount.mid { background: var(--discount-mid); color: #1A1C1E; }
+    .product-discount.hot {
+      background: var(--discount-hot);
+      color: var(--text-primary);
+      animation: pulse-hot 2s ease-in-out infinite;
     }
-    .table th.col-right, .table td.col-right {
-      text-align: right;
+    @keyframes pulse-hot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.75; }
     }
 
-    /* === Badges === */
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: var(--radius-pill);
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    .badge--silpo {
-      background-color: rgba(34,197,94,0.12);
-      color: var(--accent-success);
-    }
-    .badge--novus {
-      background-color: rgba(59,130,246,0.12);
-      color: var(--accent-primary);
-    }
-    .badge--fora {
-      background-color: rgba(245,158,11,0.14);
-      color: #D97706;
-    }
-
-    /* === Status Bar === */
-    .status-bar {
-      padding: 14px 20px;
-      background-color: var(--bg-card);
+    .product-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
       color: var(--text-secondary);
-      font-size: 13px;
-      border: 1px solid var(--divider);
-      border-radius: 16px;
-      text-align: center;
-      margin-top: 16px;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .loader {
-      display: none;
-      padding: 40px 24px 20px;
-      text-align: center;
-      color: var(--accent-primary);
-      font-size: var(--font-size-md);
+      text-decoration: none;
+      font-size: 11px;
       font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.15s ease;
+      align-self: flex-start;
     }
-    .loader.active {
-      display: block;
-    }
-
-    /* === Responsive (Mobile Cards) === */
-    @media (max-width: 992px) {
-      body { padding: 16px; }
-      .header { padding: 16px; top: 16px; }
-      .table-wrap { padding-top: 16px; }
+    .product-link:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
     }
 
-    @media (max-width: 768px) {
-      .header { gap: 12px; }
-      .header__top { align-items: flex-start; }
-      .header__toggle { display: inline-flex; align-self: flex-start; }
-      .header__search,
-      .filters-panel { width: 100%; }
-      .header--collapsed .header__controls,
-      .header--collapsed .header__search,
-      .header--collapsed .filters-panel { display: none; }
-      .header--collapsed .header__toggle-icon { transform: rotate(-180deg); }
-      .header__controls { flex-direction: column; align-items: stretch; }
-      .multiselect { max-width: 100%; }
-      .header__search { margin-left: 0; width: 100%; }
-      .header__search input { flex: 1; }
-      .filters-panel { gap: 12px; }
-      .filter-item input[type="range"] { width: 100px; }
+    /* === Empty state === */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .empty-state-icon { font-size: 36px; margin-bottom: 16px; }
+    .empty-state-title { color: var(--text-secondary); font-size: 13px; margin-bottom: 4px; }
+    .empty-state-sub { color: rgba(138, 144, 153, 0.6); font-size: 12px; }
 
-      .table, .table tbody, .table tr, .table td {
-        display: block;
-        width: 100%; }
-      .table thead {
-        display: none;
-      }
-      .table tr {
-        background-color: var(--bg-card);
-        border: 1px solid var(--divider);
-        border-radius: var(--radius-lg);
-        margin-bottom: 12px;
-        padding: 12px;
-        box-shadow: var(--shadow-sm);
-      }
-      .table tr.selected {
-        border-color: var(--accent-primary);
-      }
-      .table tr.selected td:first-child::before {
-        display: none;
-      }
-      .table td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-        border-bottom: 1px solid var(--divider);
-        text-align: left;
-      }
-      .table td:last-child {
-        border-bottom: none;
-      }
-      .table td::before {
-        content: attr(data-label);
-        color: var(--text-secondary);
-        font-weight: 500;
-        margin-right: 16px;
-      }
-      .table td > :last-child {
-        text-align: right;
-      }
+    /* === Loader === */
+    .loader {
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+    }
+    .loader-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--action-primary);
+      margin: 0 3px;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .loader-dot:nth-child(1) { animation-delay: -0.32s; }
+    .loader-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
 
-      .table td.product-name {
-        flex-direction: column;
-        align-items: flex-start;
-        font-size: 16px;
-        font-weight: bold;
-      }
-      .table td.product-name::before {
-        margin-bottom: 4px;
-      }
-      .table td.col-right {
-        text-align: left;
-      }
-      .table td.price, .table td.old-price, .table td.discount {
-        text-align: right;
-      }
+    /* === Sort bar === */
+    .sort-bar {
+      display: flex;
+      gap: 4px;
+      padding: 8px 16px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border-card);
+      scrollbar-width: none;
+    }
+    .sort-bar::-webkit-scrollbar { display: none; }
+    .sort-btn {
+      padding: 5px 10px;
+      background: transparent;
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .sort-btn:hover { background: rgba(255, 255, 255, 0.05); }
+    .sort-btn.active {
+      background: var(--action-primary);
+      border-color: var(--action-primary);
+      color: var(--text-primary);
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="header__top">
-      <h1>WebSales</h1>
-      <button
-        id="headerToggle"
-        class="btn btn--secondary header__toggle"
-        type="button"
-        aria-expanded="true"
-        aria-controls="headerControls headerSearch headerFilters"
-      >
-        <span id="headerToggleLabel">Показати</span>
-        <svg class="header__toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-      </button>
-      <div id="headerControls" class="header__controls">
-        <div class="multiselect">
-          <button id="storeBtn" class="btn btn--secondary multiselect-btn">
-            <span>-- Магазини --</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-          </button>
-          <div id="storeDropdown" class="multiselect-dropdown">
-            <label class="checkbox-pill">
-              <input type="checkbox" value="silpo"><span>Сільпо</span>
-            </label>
-            <label class="checkbox-pill">
-              <input type="checkbox" value="novus"><span>Новус</span>
-            </label>
-            <label class="checkbox-pill">
-              <input type="checkbox" value="fora"><span>Фора</span>
-            </label>
-          </div>
+  <div class="app">
+    <header class="app-header">
+      <div class="app-title">
+        <strong>WebSales</strong> · Система пошуку акцій
+      </div>
+      <div class="app-subtitle">Сільпо · Новус · Фора — усі знижки в одному місці</div>
+
+      <button class="filter-toggle" id="filterToggle" type="button">▼ Фільтри</button>
+
+      <div class="filters" id="filters">
+        <div class="filter-row">
+          <span class="filter-chip active" data-store="silpo" id="chipSilpo">
+            <span class="filter-chip-dot"></span>Сільпо
+          </span>
+          <span class="filter-chip active" data-store="novus" id="chipNovus">
+            <span class="filter-chip-dot"></span>Новус
+          </span>
+          <span class="filter-chip active" data-store="fora" id="chipFora">
+            <span class="filter-chip-dot"></span>Фора
+          </span>
         </div>
-        
-        <div class="multiselect">
-          <button id="categoryBtn" class="btn btn--secondary multiselect-btn" disabled>
-            <span>-- Категорії --</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-          </button>
-          <div id="categoryDropdown" class="multiselect-dropdown">
-            <div class="dropdown-search">
-              <input type="text" id="categorySearch" class="input" placeholder="Пошук категорії..." />
-            </div>
-            <div id="categoryList">
-              <!-- Р§РµРєР±РѕРєСЃС‹ РєР°С‚РµРіРѕСЂРёР№ Р±СѓРґСѓС‚ Р·РґРµСЃСЊ С‚РѕР¶Рµ checkbox-pill -->
-            </div>
+
+        <div class="filter-row">
+          <input type="text" class="filter-input" id="searchInput" placeholder="🔍 Пошук товару..." />
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-range">
+            <input type="number" class="filter-input" id="discountMin" placeholder="Знижка від %" min="0" max="100" step="1" value="35" style="max-width: 110px" />
+            <span class="filter-range-sep">—</span>
+            <input type="number" class="filter-input" id="discountMax" placeholder="до %" min="0" max="100" step="1" value="60" style="max-width: 110px" />
           </div>
         </div>
 
-        <button id="btnFind" class="btn btn--primary" disabled>Знайти товари</button>
+        <div class="filter-row">
+          <button class="btn-primary" id="btnFind" type="button">Знайти товари</button>
+        </div>
       </div>
+    </header>
 
-      <div id="headerSearch" class="header__search">
-        <input type="text" id="searchInput" class="input" placeholder="Пошук товару..." />
-        <button id="btnSearch" class="btn btn--secondary">Пошук</button>
-      </div>
+    <div class="status-bar">
+      <span>Знайдено: <strong id="count">0</strong> товарів</span>
+      <span id="statusInfo">Моноліт готовий</span>
     </div>
 
-    <div id="headerFilters" class="filters-panel">
-      <div class="filter-item">
-        <label for="minDiscount">Від: <span id="minDiscountVal">35</span>%</label>
-        <input type="range" id="minDiscount" min="0" max="100" step="1" value="35" />
-      </div>
-      <div class="filter-item">
-        <label for="maxDiscount">До: <span id="maxDiscountVal">60</span>%</label>
-        <input type="range" id="maxDiscount" min="0" max="100" step="1" value="60" />
-      </div>
+    <div class="sort-bar">
+      <button class="sort-btn active" data-sort="discount-desc" type="button">↓ Знижка</button>
+      <button class="sort-btn" data-sort="price-asc" type="button">↑ Ціна</button>
+      <button class="sort-btn" data-sort="price-desc" type="button">↓ Ціна</button>
+      <button class="sort-btn" data-sort="name" type="button">А–Я</button>
     </div>
+
+    <main class="products" id="products"></main>
   </div>
-
-  <div class="loader" id="loader">Завантаження...</div>
-
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th data-key="store">Магазин <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></th>
-          <th data-key="name">Назва продукту <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></th>
-          <th data-key="category">Категорія <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></th>
-          <th data-key="unit">Одиниця <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></th>
-          <th data-key="price" class="col-right">Ціна <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></th>
-          <th data-key="oldPrice" class="col-right">Стара ціна <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></th>
-          <th data-key="discount" class="col-right">Знижка <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></th>
-          <th>Дія</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
-
-  <div class="status-bar" id="statusBar">Оберіть магазин та категорію.</div>
 
   <script>
-    // The Worker serves this page as a static HTML string, so all browser-side
-    // state management lives inside this embedded script.
-    const header = document.querySelector('.header');
-    const headerControls = document.getElementById('headerControls');
-    const headerSearch = document.getElementById('headerSearch');
-    const headerFilters = document.getElementById('headerFilters');
-    const headerToggle = document.getElementById('headerToggle');
-    const headerToggleLabel = document.getElementById('headerToggleLabel');
-    const storeBtn = document.getElementById('storeBtn');
-    const storeDropdown = document.getElementById('storeDropdown');
-    const categoryBtn = document.getElementById('categoryBtn');
-    const categoryDropdown = document.getElementById('categoryDropdown');
-    const categorySearch = document.getElementById('categorySearch');
-    const categoryList = document.getElementById('categoryList');
-    const btnFind = document.getElementById('btnFind');
-    const searchInput = document.getElementById('searchInput');
-    const btnSearch = document.getElementById('btnSearch');
-    const minDiscountInput = document.getElementById('minDiscount');
-    const minDiscountVal = document.getElementById('minDiscountVal');
-    const maxDiscountInput = document.getElementById('maxDiscount');
-    const maxDiscountVal = document.getElementById('maxDiscountVal');
-    const tableBody = document.getElementById('tableBody');
-    const statusBar = document.getElementById('statusBar');
-    const loader = document.getElementById('loader');
+    const STORE_LABELS = { silpo: 'Сільпо', novus: 'Новус', fora: 'Фора' };
+    const STORE_EMOJI = { silpo: '🌲', novus: '🟡', fora: '⚓' };
 
-    const STORE_LABELS = {
-      silpo: 'Сільпо',
-      novus: 'Новус',
-      fora: 'Фора'
+    const state = {
+      activeStores: { silpo: true, novus: true, fora: true },
+      allProducts: [],
+      displayProducts: [],
+      currentSort: 'discount-desc',
+      lastRawCount: 0,
+      lastErrors: [],
+      loading: false
     };
 
-    // allProducts keeps the merged API payload, while displayProducts holds
-    // the current filtered and sorted slice rendered in the table.
-    let allProducts = [];
-    let displayProducts = [];
-    let currentSort = { key: null, dir: 1 };
-    // Incrementing request ids lets us ignore stale category responses when
-    // the user quickly changes the selected stores.
-    let currentCategoryFetchId = 0;
-    let lastRawProductCount = 0;
-    let lastLoadErrors = [];
-
-    function syncHeaderCollapsedState() {
-      const isMobile = window.matchMedia('(max-width: 768px)').matches;
-
-      if (!isMobile) {
-        header.classList.remove('header--collapsed');
-      }
-
-      const isCollapsed = isMobile && header.classList.contains('header--collapsed');
-      headerToggleLabel.textContent = isCollapsed ? '\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u0438' : '\u0421\u0445\u043e\u0432\u0430\u0442\u0438';
-      headerToggle.setAttribute('aria-expanded', String(!isCollapsed));
-      headerControls.hidden = isCollapsed;
-      headerSearch.hidden = isCollapsed;
-      headerFilters.hidden = isCollapsed;
-    }
-
-    headerToggle.addEventListener('click', function() {
-      if (!window.matchMedia('(max-width: 768px)').matches) {
-        return;
-      }
-
-      header.classList.toggle('header--collapsed');
-      syncHeaderCollapsedState();
-    });
-
-    window.addEventListener('resize', syncHeaderCollapsedState);
-    syncHeaderCollapsedState();
-
-    storeBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      if (!storeBtn.disabled) {
-        storeBtn.closest('.multiselect').classList.toggle('open');
-      }
-    });
-
-    categoryBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      if (!categoryBtn.disabled) {
-        categoryBtn.closest('.multiselect').classList.toggle('open');
-      }
-    });
-
-    document.addEventListener('click', function(e) {
-      if (!storeBtn.contains(e.target) && !storeDropdown.contains(e.target)) {
-        storeBtn.closest('.multiselect').classList.remove('open');
-      }
-      if (!categoryBtn.contains(e.target) && !categoryDropdown.contains(e.target)) {
-        categoryBtn.closest('.multiselect').classList.remove('open');
-      }
-    });
-
-    categorySearch.addEventListener('input', function(e) {
-      const query = safeLower(e.target.value);
-      let currentHeader = null;
-      let headerHasVisibleCategories = false;
-
-      Array.from(categoryList.children).forEach(function(element) {
-        if (element.classList.contains('select-all-row')) {
-          return;
-        }
-        if (element.classList.contains('store-header')) {
-          if (currentHeader) {
-            currentHeader.style.display = headerHasVisibleCategories ? 'block' : 'none';
-          }
-          currentHeader = element;
-          headerHasVisibleCategories = false;
-          return;
-        }
-
-        if (!element.classList.contains('checkbox-pill')) {
-          return;
-        }
-
-        const text = safeLower(element.textContent);
-        const isVisible = !query || text.includes(query);
-        element.style.display = isVisible ? 'flex' : 'none';
-        if (isVisible) {
-          headerHasVisibleCategories = true;
-        }
-      });
-
-      if (currentHeader) {
-        currentHeader.style.display = headerHasVisibleCategories ? 'block' : 'none';
-      }
-      updateSelectAllState();
-    });
-
-    categorySearch.addEventListener('click', function(e) {
-      e.stopPropagation();
-    });
-
-    storeDropdown.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
-      checkbox.addEventListener('change', updateStoreButtonText);
-    });
-
-    document.querySelectorAll('.table thead th[data-key]').forEach(function(th) {
-      th.addEventListener('click', function() {
-        const key = th.dataset.key;
-        if (!key || key === 'checked') {
-          return;
-        }
-
-        if (currentSort.key === key) {
-          currentSort.dir *= -1;
-        } else {
-          currentSort.key = key;
-          currentSort.dir = key === 'discount' ? -1 : 1;
-        }
-
-        document.querySelectorAll('.table thead th').forEach(function(header) {
-          header.classList.remove('sorted', 'asc', 'desc');
-        });
-        th.classList.add('sorted');
-        th.classList.add(currentSort.dir === 1 ? 'asc' : 'desc');
-
-        sortAndRender();
-      });
-    });
-
-    btnFind.addEventListener('click', loadProducts);
-    btnSearch.addEventListener('click', doSearch);
-    searchInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        doSearch();
-      }
-    });
-    minDiscountInput.addEventListener('input', function() {
-      if (toNumber(minDiscountInput.value) > toNumber(maxDiscountInput.value)) {
-        maxDiscountInput.value = minDiscountInput.value;
-      }
-      updateDiscountLabels();
-      doSearch();
-    });
-    maxDiscountInput.addEventListener('input', function() {
-      if (toNumber(maxDiscountInput.value) < toNumber(minDiscountInput.value)) {
-        minDiscountInput.value = maxDiscountInput.value;
-      }
-      updateDiscountLabels();
-      doSearch();
-    });
-
-    resetDiscountRange([]);
-    updateStoreButtonText();
-    updateCategoryButtonText();
+    const filtersEl = document.getElementById('filters');
+    const filterToggleEl = document.getElementById('filterToggle');
+    const chipEls = {
+      silpo: document.getElementById('chipSilpo'),
+      novus: document.getElementById('chipNovus'),
+      fora:  document.getElementById('chipFora')
+    };
+    const searchInput = document.getElementById('searchInput');
+    const discountMinInput = document.getElementById('discountMin');
+    const discountMaxInput = document.getElementById('discountMax');
+    const btnFind = document.getElementById('btnFind');
+    const productsEl = document.getElementById('products');
+    const countEl = document.getElementById('count');
+    const statusInfoEl = document.getElementById('statusInfo');
+    const sortButtons = document.querySelectorAll('.sort-btn');
 
     function safeLower(value) {
       return String(value || '').toLowerCase();
     }
-
     function toNumber(value) {
-      const numeric = Number(value);
-      return Number.isFinite(numeric) ? numeric : 0;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    }
+    function formatPrice(value) {
+      return value == null ? '—' : toNumber(value).toFixed(2) + ' ₴';
+    }
+    function esc(value) {
+      if (value == null) return '';
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function toggleFilters() {
+      filtersEl.classList.toggle('collapsed');
+      const isCollapsed = filtersEl.classList.contains('collapsed');
+      filterToggleEl.textContent = isCollapsed ? '▶ Фільтри' : '▼ Фільтри';
+    }
+
+    function toggleStore(key) {
+      state.activeStores[key] = !state.activeStores[key];
+      const chip = chipEls[key];
+      if (chip) chip.classList.toggle('active', state.activeStores[key]);
+    }
+
+    function onSearch() { filterAndRender(); }
+    function onDiscountMin() { filterAndRender(); }
+    function onDiscountMax() { filterAndRender(); }
+
+    function sort(key) {
+      state.currentSort = key;
+      sortButtons.forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.sort === key);
+      });
+      filterAndRender();
     }
 
     async function readJsonResponse(resp, fallbackMessage) {
       let data;
-
       try {
         data = await resp.json();
       } catch (error) {
@@ -941,442 +573,213 @@ export const HTML_PAGE = `<!DOCTYPE html>
         }
         throw new Error('Некоректна JSON-відповідь від сервера.');
       }
-
       if (!resp.ok) {
         throw new Error((data && data.error) || fallbackMessage || ('HTTP ' + resp.status));
       }
-
       return data;
     }
 
-    function updateDiscountLabels() {
-      minDiscountVal.textContent = minDiscountInput.value;
-      maxDiscountVal.textContent = maxDiscountInput.value;
-    }
-
-    function resetDiscountRange(products) {
-      minDiscountInput.value = '35';
-      maxDiscountInput.value = '60';
-      updateDiscountLabels();
-    }
-
-    function hasActiveFilters() {
-      return !!searchInput.value.trim() || toNumber(minDiscountInput.value) > 0 || toNumber(maxDiscountInput.value) < 100;
-    }
-
-    function updateStatusBar() {
-      const duplicateCount = Math.max(0, lastRawProductCount - allProducts.length);
-      const duplicateNote = duplicateCount > 0 ? ' Без дублікатів: ' + duplicateCount + '.' : '';
-      const errorNote = lastLoadErrors.length > 0 ? ' Помилки: ' + lastLoadErrors.join(' | ') : '';
-
-      if (allProducts.length === 0) {
-        statusBar.textContent = lastLoadErrors.length > 0 ? 'Не вдалося завантажити товари. ' + lastLoadErrors.join(' | ') : 'Товари не завантажені.';
-        return;
-      }
-
-      if (hasActiveFilters()) {
-        statusBar.textContent = 'Показано ' + displayProducts.length + ' з ' + allProducts.length + ' товарів.' + duplicateNote + errorNote;
-        return;
-      }
-
-      statusBar.textContent = 'Завантажено ' + allProducts.length + ' товарів.' + duplicateNote + errorNote;
-    }
-
-    function updateStoreButtonText() {
-      const checkedBoxes = Array.from(storeDropdown.querySelectorAll('input[type="checkbox"]:checked'));
-      const buttonText = storeBtn.querySelector('span:first-child');
-
-      if (checkedBoxes.length === 0) {
-        buttonText.textContent = '-- Магазини --';
-      } else if (checkedBoxes.length === 1) {
-        buttonText.textContent = checkedBoxes[0].nextElementSibling.textContent;
-      } else {
-        buttonText.textContent = 'Обрано: ' + checkedBoxes.length;
-      }
-
-      loadCategoriesForStores(checkedBoxes.map(function(checkbox) {
-        return checkbox.value;
-      }));
-    }
-
-    function getSelectedStores() {
-      return Array.from(storeDropdown.querySelectorAll('input[type="checkbox"]:checked')).map(function(checkbox) {
-        return checkbox.value;
-      });
-    }
-
-    function updateCategoryButtonText() {
-      const checkedBoxes = Array.from(categoryDropdown.querySelectorAll('input[type="checkbox"]:checked'));
-      const buttonText = categoryBtn.querySelector('span:first-child');
-
-      if (checkedBoxes.length === 0) {
-        buttonText.textContent = '-- Категорії --';
-        btnFind.disabled = true;
-      } else if (checkedBoxes.length === 1) {
-        buttonText.textContent = checkedBoxes[0].nextElementSibling.textContent;
-        btnFind.disabled = false;
-      } else {
-        buttonText.textContent = 'Обрано: ' + checkedBoxes.length;
-        btnFind.disabled = false;
-      }
-
-      if (categoryBtn.disabled) {
-        btnFind.disabled = true;
-      }
-      updateSelectAllState();
-    }
-
-    function getSelectedCategories() {
-      return Array.from(categoryList.querySelectorAll('.checkbox-pill:not(.select-all-row) input:checked')).map(function(checkbox) {
-        return checkbox.value;
-      });
-    }
-
-    function getVisibleCategoryCheckboxes() {
-      return Array.from(categoryList.querySelectorAll('.checkbox-pill:not(.select-all-row)'))
-        .filter(function(label) { return label.style.display !== 'none'; })
-        .map(function(label) { return label.querySelector('input'); });
-    }
-
-    function updateSelectAllState() {
-      const masterCb = categoryList.querySelector('.select-all-row input');
-      if (!masterCb) return;
-      const visible = getVisibleCategoryCheckboxes();
-      const checkedCount = visible.filter(function(cb) { return cb.checked; }).length;
-      if (visible.length === 0 || checkedCount === 0) {
-        masterCb.checked = false;
-        masterCb.indeterminate = false;
-      } else if (checkedCount === visible.length) {
-        masterCb.checked = true;
-        masterCb.indeterminate = false;
-      } else {
-        masterCb.checked = false;
-        masterCb.indeterminate = true;
-      }
-    }
-
-    function sortAndRender() {
-      const key = currentSort.key;
-      const dir = currentSort.dir;
-
-      if (!key) {
-        renderProducts(displayProducts);
-        return;
-      }
-
-      displayProducts.sort(function(a, b) {
-        let valueA = a[key];
-        let valueB = b[key];
-
-        if (key === 'discount') {
-          valueA = valueA != null ? Math.abs(toNumber(valueA)) : null;
-          valueB = valueB != null ? Math.abs(toNumber(valueB)) : null;
-        }
-
-        if (valueA == null && valueB == null) return 0;
-        if (valueA == null) return 1;
-        if (valueB == null) return -1;
-
-        if (typeof valueA === 'number' && typeof valueB === 'number') {
-          return (valueA - valueB) * dir;
-        }
-
-        return String(valueA).localeCompare(String(valueB), 'uk') * dir;
-      });
-
-      renderProducts(displayProducts);
-    }
-
-    async function loadCategoriesForStores(stores) {
-      // Categories are loaded in parallel per store, but rendered in grouped
-      // sections so users can still see where each option came from.
-      const fetchId = ++currentCategoryFetchId;
-
-      categoryList.innerHTML = '';
-      categorySearch.value = '';
-      categoryBtn.querySelector('span:first-child').textContent = '-- Категорії --';
-      categoryBtn.disabled = true;
-      btnFind.disabled = true;
-      allProducts = [];
-      displayProducts = [];
-      lastRawProductCount = 0;
-      lastLoadErrors = [];
-      tableBody.innerHTML = '';
-      resetDiscountRange([]);
-
-      const selectAllLabel = document.createElement('label');
-      selectAllLabel.className = 'checkbox-pill select-all-row';
-      const selectAllCb = document.createElement('input');
-      selectAllCb.type = 'checkbox';
-      const selectAllSpan = document.createElement('span');
-      selectAllSpan.textContent = 'Обрати всі';
-      selectAllLabel.appendChild(selectAllCb);
-      selectAllLabel.appendChild(selectAllSpan);
-      selectAllCb.addEventListener('change', function() {
-        const visible = getVisibleCategoryCheckboxes();
-        visible.forEach(function(cb) { cb.checked = selectAllCb.checked; });
-        updateCategoryButtonText();
-      });
-      categoryList.appendChild(selectAllLabel);
-      if (!stores || stores.length === 0) {
-        statusBar.textContent = 'Оберіть магазин(и) та категорію(ї).';
-        return;
-      }
-
-      loader.classList.add('active');
-      statusBar.textContent = 'Завантаження категорій...';
-
-      try {
-        const settlements = await Promise.allSettled(stores.map(async function(store) {
-          const resp = await fetch('/api/' + store + '/categories');
-          const data = await readJsonResponse(resp, 'Не вдалося завантажити категорії для магазину ' + (STORE_LABELS[store] || store) + '.');
-          return {
-            store: store,
-            categories: Array.isArray(data) ? data : []
-          };
-        }));
-
-        if (fetchId !== currentCategoryFetchId) {
-          return;
-        }
-
-        let totalCategories = 0;
-        const errors = [];
-
-        settlements.forEach(function(settlement, index) {
-          const store = stores[index];
-          const storeLabel = STORE_LABELS[store] || store;
-
-          if (settlement.status !== 'fulfilled') {
-            errors.push(storeLabel + ': ' + (settlement.reason && settlement.reason.message ? settlement.reason.message : 'Невідома помилка.'));
-            return;
-          }
-
-          const categories = settlement.value.categories.filter(function(category) {
-            return (category && category.count) !== 0;
-          });
-
-          if (categories.length === 0) {
-            return;
-          }
-
-          const storeHeader = document.createElement('div');
-          storeHeader.className = 'store-header';
-          storeHeader.textContent = storeLabel;
-          categoryList.appendChild(storeHeader);
-
-          categories.forEach(function(category) {
-            totalCategories += 1;
-
-            const label = document.createElement('label');
-            label.className = 'checkbox-pill';
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = store + ':' + category.id;
-            checkbox.addEventListener('change', updateCategoryButtonText);
-
-            const textSpan = document.createElement('span');
-            textSpan.textContent = category.title + (category.count ? ' (' + category.count + ')' : '');
-
-            label.appendChild(checkbox);
-            label.appendChild(textSpan);
-            categoryList.appendChild(label);
-          });
-        });
-
-        categoryBtn.disabled = totalCategories === 0;
-        updateCategoryButtonText();
-
-        if (totalCategories > 0) {
-          statusBar.textContent = 'Категорії завантажені (' + totalCategories + '). Оберіть категорію.';
-          if (errors.length > 0) {
-            statusBar.textContent += ' Помилки: ' + errors.join(' | ');
-          }
-        } else if (errors.length > 0) {
-          statusBar.textContent = 'Не вдалося завантажити категорії. ' + errors.join(' | ');
-        } else {
-          statusBar.textContent = 'Для обраних магазинів категорій не знайдено.';
-        }
-      } catch (error) {
-        if (fetchId === currentCategoryFetchId) {
-          statusBar.textContent = 'Помилка: ' + error.message;
-        }
-      } finally {
-        if (fetchId === currentCategoryFetchId) {
-          loader.classList.remove('active');
-        }
-      }
-    }
-
     async function loadProducts() {
-      // Product payloads are fetched store-by-store and merged client-side
-      // because each upstream provider uses its own API contract.
-      const stores = getSelectedStores();
-      const categoriesParam = getSelectedCategories();
-
-      if (stores.length === 0 || categoriesParam.length === 0) {
+      const stores = Object.keys(state.activeStores).filter(function(k) { return state.activeStores[k]; });
+      if (stores.length === 0) {
+        statusInfoEl.textContent = 'Оберіть хоча б один магазин';
+        statusInfoEl.classList.add('status-error');
         return;
       }
 
-      loader.classList.add('active');
+      state.loading = true;
       btnFind.disabled = true;
-      storeBtn.disabled = true;
-      categoryBtn.disabled = true;
-      storeBtn.closest('.multiselect').classList.remove('open');
-      categoryBtn.closest('.multiselect').classList.remove('open');
-      statusBar.textContent = 'Завантаження товарів...';
-      tableBody.innerHTML = '';
-      allProducts = [];
-      displayProducts = [];
-      lastRawProductCount = 0;
-      lastLoadErrors = [];
+      statusInfoEl.textContent = 'Завантаження...';
+      statusInfoEl.classList.remove('status-error');
+      productsEl.innerHTML = '<div class="loader"><span class="loader-dot"></span><span class="loader-dot"></span><span class="loader-dot"></span></div>';
+      countEl.textContent = '0';
+
       try {
         const settlements = await Promise.allSettled(stores.map(async function(store) {
-          const storeCategories = categoriesParam
-            .filter(function(value) {
-              return value.startsWith(store + ':');
-            })
-            .map(function(value) {
-              return value.split(':')[1];
-            })
-            .join(',');
-
-          if (!storeCategories) {
-            return null;
+          const catResp = await fetch('/api/' + store + '/categories');
+          const categories = await readJsonResponse(catResp, 'Не вдалося завантажити категорії для ' + STORE_LABELS[store] + '.');
+          const valid = Array.isArray(categories)
+            ? categories.filter(function(c) { return c && c.id && c.count; })
+            : [];
+          if (valid.length === 0) {
+            return { store: store, data: { products: [] } };
           }
-
-          const resp = await fetch('/api/' + store + '/products?category=' + encodeURIComponent(storeCategories));
-          const data = await readJsonResponse(resp, 'Не вдалося завантажити товари для магазину ' + (STORE_LABELS[store] || store) + '.');
-
-          return {
-            store: store,
-            data: data
-          };
+          const ids = valid.map(function(c) { return c.id; }).join(',');
+          const prodResp = await fetch('/api/' + store + '/products?category=' + encodeURIComponent(ids));
+          const data = await readJsonResponse(prodResp, 'Не вдалося завантажити товари для ' + STORE_LABELS[store] + '.');
+          return { store: store, data: data };
         }));
 
-        const mergedProducts = [];
+        const merged = [];
         const errors = [];
         let rawCount = 0;
-
         settlements.forEach(function(settlement, index) {
           const store = stores[index];
           const storeLabel = STORE_LABELS[store] || store;
-
           if (settlement.status !== 'fulfilled') {
             errors.push(storeLabel + ': ' + (settlement.reason && settlement.reason.message ? settlement.reason.message : 'Невідома помилка.'));
             return;
           }
-
-          if (!settlement.value) {
-            return;
-          }
-
+          if (!settlement.value) return;
           const data = settlement.value.data || {};
           const products = Array.isArray(data.products) ? data.products : [];
-
-          mergedProducts.push.apply(mergedProducts, products);
+          merged.push.apply(merged, products);
           rawCount += data.rawTotal || data.total || products.length;
-
           if (Array.isArray(data.errors) && data.errors.length > 0) {
             errors.push(storeLabel + ': ' + data.errors.join(', '));
           }
         });
 
-        allProducts = mergedProducts;
-        displayProducts = mergedProducts.slice();
-        lastRawProductCount = rawCount || mergedProducts.length;
-        lastLoadErrors = errors;
-        resetDiscountRange(allProducts);
-
-        currentSort = { key: 'discount', dir: -1 };
-        document.querySelectorAll('.table thead th').forEach(function(header) {
-          header.classList.remove('sorted', 'asc', 'desc');
-        });
-        const discountHeader = document.querySelector('.table thead th[data-key="discount"]');
-        if (discountHeader) {
-          discountHeader.classList.add('sorted', 'desc');
-        }
-
-        doSearch();
+        state.allProducts = merged;
+        state.lastRawCount = rawCount || merged.length;
+        state.lastErrors = errors;
       } catch (error) {
-        statusBar.textContent = 'Помилка: ' + error.message;
+        state.allProducts = [];
+        state.lastRawCount = 0;
+        state.lastErrors = [error.message || 'Невідома помилка'];
       } finally {
-        loader.classList.remove('active');
+        state.loading = false;
         btnFind.disabled = false;
-        storeBtn.disabled = false;
-        categoryBtn.disabled = false;
-        updateCategoryButtonText();
+        filterAndRender();
       }
     }
 
-    function doSearch() {
-      // Once products are loaded, filtering stays local so the UI remains
-      // responsive while the user tweaks search and price controls.
+    function filterAndRender() {
       const query = safeLower(searchInput.value.trim());
-      const minDiscount = toNumber(minDiscountInput.value);
-      const maxDiscount = toNumber(maxDiscountInput.value);
+      const minDiscount = toNumber(discountMinInput.value);
+      const maxDiscount = toNumber(discountMaxInput.value);
 
-      displayProducts = allProducts.filter(function(product) {
-        const textMatch = !query || safeLower(product && product.name).includes(query) || safeLower(product && product.category).includes(query) || safeLower(product && product.store).includes(query);
-        const discountValue = Math.abs(toNumber(product && product.discount));
-        const discountMatch = discountValue >= minDiscount && discountValue <= maxDiscount;
-
+      state.displayProducts = state.allProducts.filter(function(p) {
+        const textMatch = !query
+          || safeLower(p && p.name).includes(query)
+          || safeLower(p && p.category).includes(query)
+          || safeLower(p && p.store).includes(query);
+        const discount = Math.abs(toNumber(p && p.discount));
+        const discountMatch = (minDiscount === 0 || discount >= minDiscount) && (maxDiscount === 0 || discount <= maxDiscount);
         return textMatch && discountMatch;
       });
 
-      sortAndRender();
-      updateStatusBar();
+      const sortKey = state.currentSort;
+      let realKey, dir;
+      if (sortKey === 'price-asc')   { realKey = 'price';    dir = 1; }
+      else if (sortKey === 'price-desc') { realKey = 'price';    dir = -1; }
+      else if (sortKey === 'name')       { realKey = 'name';     dir = 1; }
+      else                                { realKey = 'discount'; dir = -1; }
+
+      state.displayProducts.sort(function(a, b) {
+        let vA = a[realKey];
+        let vB = b[realKey];
+        if (realKey === 'discount') {
+          vA = vA != null ? Math.abs(toNumber(vA)) : null;
+          vB = vB != null ? Math.abs(toNumber(vB)) : null;
+        }
+        if (vA == null && vB == null) return 0;
+        if (vA == null) return 1;
+        if (vB == null) return -1;
+        if (typeof vA === 'number' && typeof vB === 'number') {
+          return (vA - vB) * dir;
+        }
+        return String(vA).localeCompare(String(vB), 'uk') * dir;
+      });
+
+      renderProducts();
     }
 
-    function renderProducts(products) {
-      tableBody.innerHTML = '';
-      if (!products.length) {
-        const emptyRow = document.createElement('tr');
-        emptyRow.innerHTML = '<td colspan="8" style="text-align:center;color:#6B7280;">Нічого не знайдено за поточними фільтрами.</td>';
-        tableBody.appendChild(emptyRow);
+    function renderProducts() {
+      countEl.textContent = state.displayProducts.length;
+      if (state.displayProducts.length === 0) {
+        productsEl.innerHTML = renderEmpty();
+        updateStatusInfo();
         return;
       }
-
-      products.forEach(function(product) {
-        const row = document.createElement('tr');
-        const storeClass = product.store === 'Сільпо' ? 'silpo' : product.store === 'Фора' ? 'fora' : 'novus';
-        const discountDisplay = product.discount != null ? Math.abs(toNumber(product.discount)) + '%' : '—';
-
-        row.innerHTML =
-          '<td data-label="Магазин"><span class="badge badge--' + storeClass + '">' + esc(product.store) + '</span></td>' +
-          '<td data-label="Назва" class="product-name">' + esc(product.name) + '</td>' +
-          '<td data-label="Категорія">' + esc(product.category) + '</td>' +
-          '<td data-label="Одиниця">' + esc(product.unit) + '</td>' +
-          '<td data-label="Ціна" class="price">' + formatPrice(product.price) + '</td>' +
-          '<td data-label="Стара ціна" class="old-price col-right">' + (product.oldPrice ? formatPrice(product.oldPrice) : '—') + '</td>' +
-          '<td data-label="Знижка" class="discount' + (product.discount != null ? ' has' : '') + ' col-right">' + discountDisplay + '</td>' +
-          '<td data-label="Дія"><a class="btn btn--ghost" href="' + esc(product.url || '#') + '" target="_blank" rel="noopener">Відкрити</a></td>';
-
-        tableBody.appendChild(row);
-      });
+      const html = state.displayProducts.map(renderProduct).join('');
+      productsEl.innerHTML = html;
+      updateStatusInfo();
     }
 
-    function formatPrice(value) {
-      if (value == null) {
-        return '—';
+    function updateStatusInfo() {
+      if (state.lastErrors.length > 0) {
+        statusInfoEl.textContent = 'Помилки: ' + state.lastErrors.join(' | ');
+        statusInfoEl.classList.add('status-error');
+        return;
       }
-      return toNumber(value).toFixed(2) + ' ₴';
+      if (state.allProducts.length === 0) {
+        statusInfoEl.textContent = 'Оберіть магазини та натисніть «Знайти»';
+        statusInfoEl.classList.remove('status-error');
+        return;
+      }
+      const duplicateCount = Math.max(0, state.lastRawCount - state.allProducts.length);
+      const duplicateNote = duplicateCount > 0 ? ' (без дублів: ' + duplicateCount + ')' : '';
+      if (state.displayProducts.length !== state.allProducts.length) {
+        statusInfoEl.textContent = 'Показано ' + state.displayProducts.length + ' з ' + state.allProducts.length + duplicateNote;
+      } else {
+        statusInfoEl.textContent = 'Завантажено ' + state.allProducts.length + duplicateNote;
+      }
+      statusInfoEl.classList.remove('status-error');
     }
 
-    function esc(value) {
-      if (value == null) {
-        return '';
-      }
+    function renderProduct(p) {
+      const discount = p.discount != null ? Math.abs(toNumber(p.discount)) : null;
+      const discountClass = discount === null ? '' : discount >= 50 ? 'hot' : discount >= 20 ? 'mid' : '';
+      const storeKey = (p.store || '').toLowerCase().replace('і', 'i');
+      const storeEmoji = STORE_EMOJI[storeKey] || '•';
+      const oldPriceHtml = p.oldPrice && toNumber(p.oldPrice) > 0
+        ? '<span class="price-old">' + esc(formatPrice(p.oldPrice)) + '</span>'
+        : '';
+      const discountHtml = discount !== null
+        ? '<span class="product-discount ' + discountClass + '">−' + discount + '%</span>'
+        : '';
+      const imageHtml = p.image
+        ? '<img class="product-image" src="' + esc(p.image) + '" loading="lazy" alt="" />'
+        : '<div class="product-image-placeholder">📦</div>';
+      const linkHtml = p.url
+        ? '<a class="product-link" href="' + esc(p.url) + '" target="_blank" rel="noopener">Відкрити в магазині →</a>'
+        : '';
 
-      return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+      return '<article class="product-card" data-store="' + esc(p.store) + '">' +
+        imageHtml +
+        '<div class="product-body">' +
+          '<div class="product-name">' + esc(p.name) + '</div>' +
+          '<div class="product-meta">' +
+            '<span class="product-store-badge ' + esc(storeKey) + '">' + storeEmoji + ' ' + esc(p.store) + '</span>' +
+            '<span class="product-category">' + esc(p.category || '—') + '</span>' +
+          '</div>' +
+          '<div class="product-footer">' +
+            '<div class="product-price">' +
+              '<span class="price-current">' + esc(formatPrice(p.price)) + '</span>' +
+              oldPriceHtml +
+            '</div>' +
+            discountHtml +
+          '</div>' +
+          linkHtml +
+        '</div>' +
+      '</article>';
+    }
+
+    function renderEmpty() {
+      return '<div class="empty-state">' +
+        '<div class="empty-state-icon">🎯</div>' +
+        '<div class="empty-state-title">Немає товарів за вашим запитом</div>' +
+        '<div class="empty-state-sub">Спробуйте змінити фільтри або скинути пошук</div>' +
+      '</div>';
+    }
+
+    filterToggleEl.addEventListener('click', toggleFilters);
+    chipEls.silpo.addEventListener('click', function() { toggleStore('silpo'); });
+    chipEls.novus.addEventListener('click', function() { toggleStore('novus'); });
+    chipEls.fora.addEventListener('click',  function() { toggleStore('fora'); });
+    searchInput.addEventListener('input', onSearch);
+    discountMinInput.addEventListener('input', onDiscountMin);
+    discountMaxInput.addEventListener('input', onDiscountMax);
+    btnFind.addEventListener('click', loadProducts);
+    sortButtons.forEach(function(btn) {
+      btn.addEventListener('click', function() { sort(btn.dataset.sort); });
+    });
+
+    if (window.matchMedia('(max-width: 420px)').matches) {
+      filtersEl.classList.add('collapsed');
+      filterToggleEl.textContent = '▶ Фільтри';
     }
   </script>
 </body>
 </html>`;
-
