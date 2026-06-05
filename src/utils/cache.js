@@ -1,10 +1,9 @@
 import { logInfo } from './logger.js';
+import { CORS_HEADERS } from './cors.js';
 
 const API_CACHE_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  ...CORS_HEADERS,
 };
 
 export async function withCache(request, ctx, fetcherFn, ttlSeconds = 900) {

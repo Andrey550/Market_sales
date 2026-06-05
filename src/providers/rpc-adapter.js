@@ -1,11 +1,35 @@
 import { findCategoryById, flattenParentCategories } from '../catalog-utils.js';
-import { fetchWithTimeout } from '../utils/fetch.js';
+import { httpPostJson } from '../utils/http.js';
 import { logError } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
+import { normalizeEcomProduct } from './normalize.js';
 
 const CATEGORIES_TIMEOUT_MS = 5000;
 const PRODUCTS_TIMEOUT_MS = 8000;
 const CATEGORY_RETRY_BASE_MS = 200;
+const MAX_PAGES = 10;
+const PAGE_CONCURRENCY = 3;
+const PRODUCTS_TOTAL_TIMEOUT_MS = 20000;
+
+function requireEnvString(env, key, storeName) {
+  const value = env[key];
+  if (value === undefined || value === null || value === '') {
+    throw new Error(`Missing required env var ${key} for ${storeName}`);
+  }
+  return String(value);
+}
+
+function requireEnvNumber(env, key, storeName) {
+  const raw = env[key];
+  if (raw === undefined || raw === null || raw === '') {
+    throw new Error(`Missing or invalid env var ${key} for ${storeName} (expected number, got ${JSON.stringify(raw)})`);
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    throw new Error(`Missing or invalid env var ${key} for ${storeName} (expected number, got ${JSON.stringify(raw)})`);
+  }
+  return value;
+}
 
 export function createRpcAdapter(config) {
   const {
@@ -14,12 +38,10 @@ export function createRpcAdapter(config) {
     filialIdKey,
     merchantIdKey = null,
     deliveryTypeKey,
-    defaultFilialId,
-    defaultMerchantId = null,
-    defaultDeliveryType,
+    deliveryTypeIsString = true,
     pageSize,
     storeName,
-    normalizeProduct,
+    productUrlBase,
   } = config;
 
   const baseHeaders = {
@@ -29,20 +51,7 @@ export function createRpcAdapter(config) {
   };
 
   async function callApi(method, data, timeoutMs) {
-    const resp = await fetchWithTimeout(baseUrl, {
-      method: 'POST',
-      headers: baseHeaders,
-      body: JSON.stringify({ method, data }),
-    }, timeoutMs);
-
-    if (!resp.ok) {
-      const text = await resp.text();
-      const err = new Error(`${storeName} API error: ${resp.status} - ${text.substring(0, 200)}`);
-      err.status = resp.status;
-      throw err;
-    }
-
-    return resp.json();
+    return httpPostJson(baseUrl, { method, data }, { headers: baseHeaders, timeoutMs });
   }
 
   async function callApiLogged(method, data, timeoutMs, maxRetries) {
@@ -59,13 +68,11 @@ export function createRpcAdapter(config) {
   }
 
   function readConfig(env = {}) {
-    const filialId = Number(env[filialIdKey]) || defaultFilialId;
-    const deliveryType = typeof defaultDeliveryType === 'string'
-      ? (env[deliveryTypeKey] || defaultDeliveryType)
-      : (Number(env[deliveryTypeKey]) || defaultDeliveryType);
-    const merchantId = merchantIdKey
-      ? (Number(env[merchantIdKey]) || defaultMerchantId)
-      : null;
+    const filialId = requireEnvNumber(env, filialIdKey, storeName);
+    const deliveryType = deliveryTypeIsString
+      ? requireEnvString(env, deliveryTypeKey, storeName)
+      : requireEnvNumber(env, deliveryTypeKey, storeName);
+    const merchantId = merchantIdKey ? requireEnvNumber(env, merchantIdKey, storeName) : null;
     return { filialId, merchantId, deliveryType };
   }
 
@@ -100,11 +107,12 @@ export function createRpcAdapter(config) {
       }
     }
 
-    const allProducts = [];
-    let offset = 0;
-    let total = null;
-
-    while (true) {
+    // Build all page requests up front so we can fetch them with bounded
+    // concurrency instead of sequentially (a 5000-item category with 50
+    // sequential pages could exceed the Worker wall-time budget).
+    const pageRequests = [];
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const offset = page * pageSize;
       const data = {
         filialId,
         ...(merchantId !== null && { merchantId }),
@@ -118,7 +126,48 @@ export function createRpcAdapter(config) {
         data.categoryId = Number.parseInt(categoryId, 10) || 0;
       }
 
-      const payload = await callApiLogged('GetSimpleCatalogItems', data, PRODUCTS_TIMEOUT_MS, 0);
+      pageRequests.push(data);
+    }
+
+    const deadline = Date.now() + PRODUCTS_TOTAL_TIMEOUT_MS;
+    const pages = [];
+
+    async function runWithConcurrency(tasks, limit) {
+      const results = new Array(tasks.length);
+      let cursor = 0;
+      const workers = Array.from({ length: Math.min(limit, tasks.length) }, async () => {
+        while (true) {
+          if (Date.now() >= deadline) {
+            return;
+          }
+          const idx = cursor++;
+          if (idx >= tasks.length) return;
+          try {
+            results[idx] = await callApiLogged('GetSimpleCatalogItems', tasks[idx], PRODUCTS_TIMEOUT_MS, 0);
+          } catch (err) {
+            logError('api_request_failed', err, { store: storeName, method: 'GetSimpleCatalogItems', page: idx });
+            results[idx] = { __error: true };
+          }
+        }
+      });
+      await Promise.all(workers);
+      return results;
+    }
+
+    const settled = await runWithConcurrency(pageRequests, PAGE_CONCURRENCY);
+
+    let total = null;
+    for (let i = 0; i < settled.length; i++) {
+      if (Date.now() >= deadline) {
+        logError('products_budget_exceeded', new Error('wall-time budget exceeded'), {
+          store: storeName,
+          categoryId,
+          pagesProcessed: i,
+        });
+        break;
+      }
+      const payload = settled[i];
+      if (!payload || payload.__error) continue;
       const items = Array.isArray(payload?.items) ? payload.items : [];
 
       if (total === null) {
@@ -126,18 +175,17 @@ export function createRpcAdapter(config) {
       }
 
       for (const item of items) {
-        allProducts.push(normalizeProduct(item, categoryName));
+        pages.push(normalizeEcomProduct(item, { storeName, productUrlBase, categoryName }));
       }
 
-      offset += pageSize;
-      if (items.length < pageSize || allProducts.length >= total) {
+      if (items.length < pageSize || pages.length >= total) {
         break;
       }
     }
 
     return {
-      total: allProducts.length,
-      products: allProducts,
+      total: pages.length,
+      products: pages,
     };
   }
 

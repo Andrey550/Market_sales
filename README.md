@@ -57,13 +57,26 @@ npm run deploy
 
 ```text
 src/
-  index.js          Worker entrypoint and route handling
-  page.js           HTML/CSS/JS for the client UI
-  catalog-utils.js  Category flattening and product merge helpers
-  silpo.js          Silpo provider integration
-  novus.js          Novus provider integration
-  fora.js           Fora provider integration
-wrangler.toml       Cloudflare Worker configuration
+  index.js              Worker entrypoint and route handling
+  page.js               HTML shell that composes client modules
+  catalog-utils.js      Category flattening and product merge helpers
+  providers/
+    registry.js         Provider registry
+    normalize.js        Shared product normalization
+    rpc-adapter.js      Shared adapter for RPC-style APIs (Silpo, Fora)
+    silpo.js            Silpo provider integration
+    novus.js            Novus provider integration
+    fora.js             Fora provider integration
+  utils/
+    http.js             Shared HTTP client (timeout, JSON, error mapping)
+    cache.js            Cache helper backed by the Workers Cache API
+    logger.js           Structured JSON logger
+    retry.js            Retry helper with exponential backoff
+  client/
+    styles.js           Embedded CSS for the UI
+    page-body.js        Embedded HTML body for the UI
+    script.js           Embedded client-side JavaScript
+wrangler.toml           Cloudflare Worker configuration
 ```
 
 ## API Endpoints

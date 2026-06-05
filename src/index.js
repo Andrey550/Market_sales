@@ -1,61 +1,49 @@
 import { mergeProductResults } from './catalog-utils.js';
-import { getSilpoCategories, getSilpoProducts, getSilpoCategoryTree } from './providers/silpo.js';
-import { getNovusCategories, getNovusProducts, getNovusCategoryTree } from './providers/novus.js';
-import { getForaCategories, getForaProducts, getForaCategoryTree } from './providers/fora.js';
+import { getProvider } from './providers/registry.js';
 import { withCache } from './utils/cache.js';
+import { CORS_HEADERS } from './utils/cors.js';
 import { logError, logInfo } from './utils/logger.js';
 import { HTML_PAGE } from './page.js';
 
 const CATEGORIES_TTL = 3600;
-const PRODUCTS_TTL = 900;
+const PRODUCTS_TTL = 300;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+const corsHeaders = CORS_HEADERS;
+
+const VALID_CATEGORY_ID = /^[a-zA-Z0-9._-]{1,64}$/;
 
 function parseCategoryParam(categoryParam) {
   if (!categoryParam) {
-    return [''];
+    return [];
   }
 
-  const categories = categoryParam
-    .split(',')
-    .map(value => value.trim())
-    .filter(Boolean);
-
-  return categories.length > 0 ? categories : [''];
+  const seen = new Set();
+  for (const value of categoryParam.split(',')) {
+    const trimmed = value.trim();
+    if (trimmed && VALID_CATEGORY_ID.test(trimmed)) {
+      seen.add(trimmed);
+    }
+  }
+  return Array.from(seen);
 }
 
 async function loadCategories(store, env) {
-  switch (store) {
-    case 'silpo': return getSilpoCategories(env);
-    case 'novus': return getNovusCategories(env);
-    case 'fora': return getForaCategories(env);
-    default: throw new Error(`Unknown store: ${store}`);
-  }
+  return getProvider(store).getCategories(env);
 }
 
 async function loadCategoryTree(store, env) {
-  switch (store) {
-    case 'silpo': return getSilpoCategoryTree(env);
-    case 'novus': return getNovusCategoryTree(env);
-    case 'fora': return getForaCategoryTree(env);
-    default: throw new Error(`Unknown store: ${store}`);
-  }
+  return getProvider(store).getCategoryTree(env);
 }
 
 async function loadProducts(store, categoryId, env, categoriesTree) {
-  switch (store) {
-    case 'silpo': return getSilpoProducts(categoryId, env, categoriesTree);
-    case 'novus': return getNovusProducts(categoryId, env, categoriesTree);
-    case 'fora': return getForaProducts(categoryId, env, categoriesTree);
-    default: throw new Error(`Unknown store: ${store}`);
-  }
+  return getProvider(store).getProducts(categoryId, env, categoriesTree);
 }
 
 async function loadProductsForCategories(store, categories, env) {
+  if (categories.length === 0) {
+    return { total: 0, rawTotal: 0, products: [] };
+  }
+
   // Resolve the category tree once so per-category lookups don't re-fetch it
   // for every batch member (avoids the N+1 problem on multi-category loads).
   let tree = null;
@@ -63,6 +51,18 @@ async function loadProductsForCategories(store, categories, env) {
     tree = await loadCategoryTree(store, env);
   } catch (err) {
     logError('category_tree_fetch_failed', err, { store });
+  }
+
+  // If the shared tree failed to load, do NOT fall back to per-category tree
+  // fetches inside loadProducts — that would create an N+1 storm. Instead,
+  // report a single error and let the caller decide how to proceed.
+  if (tree === null) {
+    return {
+      total: 0,
+      rawTotal: 0,
+      products: [],
+      errors: ['Не вдалося завантажити дерево категорій — спробуйте пізніше.'],
+    };
   }
 
   const settlements = await Promise.allSettled(
@@ -132,6 +132,7 @@ export default {
             'Content-Type': 'text/html; charset=utf-8',
             'X-Content-Type-Options': 'nosniff',
             'Referrer-Policy': 'strict-origin-when-cross-origin',
+            'Content-Security-Policy': "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self' https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'unsafe-eval'; connect-src 'self'; font-src https: data:",
           },
         });
       }
@@ -144,7 +145,7 @@ export default {
         method: request.method,
         duration: Date.now() - start
       });
-      return json({ error: err.message }, 500);
+      return json({ error: 'Internal Server Error' }, 500);
     }
   },
 };

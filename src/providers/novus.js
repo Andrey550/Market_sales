@@ -1,10 +1,9 @@
 import { findCategoryById, flattenNestedCategories } from '../catalog-utils.js';
-import { fetchWithTimeout } from '../utils/fetch.js';
+import { httpGetJson } from '../utils/http.js';
 import { logError } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
 
 const ZAKAZ_BASE = 'https://stores-api.zakaz.ua';
-const DEFAULT_STORE_ID = '482010105';
 const NOVUS_HEADERS = {
   Accept: 'application/json',
   'User-Agent': 'Mozilla/5.0',
@@ -15,26 +14,24 @@ const CATEGORIES_TIMEOUT_MS = 5000;
 const PRODUCTS_TIMEOUT_MS = 8000;
 const CATEGORY_RETRY_BASE_MS = 200;
 
+function readStoreId(env = {}) {
+  const storeId = env.NOVUS_STORE_ID;
+  if (!storeId) {
+    throw new Error('Missing required env var NOVUS_STORE_ID for novus');
+  }
+  return storeId;
+}
+
 export async function getNovusCategoryTree(env = {}) {
-  const storeId = env.NOVUS_STORE_ID || DEFAULT_STORE_ID;
+  const storeId = readStoreId(env);
+  const url = `${ZAKAZ_BASE}/stores/${storeId}/categories/`;
 
   try {
-    return await withRetry(async () => {
-      const resp = await fetchWithTimeout(
-        `${ZAKAZ_BASE}/stores/${storeId}/categories/`,
-        { headers: NOVUS_HEADERS },
-        CATEGORIES_TIMEOUT_MS
-      );
-
-      if (!resp.ok) {
-        const err = new Error(`Novus categories API error: ${resp.status}`);
-        err.status = resp.status;
-        throw err;
-      }
-
-      const data = await resp.json();
-      return Array.isArray(data) ? data : [];
-    }, 2, CATEGORY_RETRY_BASE_MS);
+    return await withRetry(
+      () => httpGetJson(url, { headers: NOVUS_HEADERS, timeoutMs: CATEGORIES_TIMEOUT_MS }),
+      2,
+      CATEGORY_RETRY_BASE_MS
+    ).then(data => Array.isArray(data) ? data : []);
   } catch (err) {
     logError('api_request_failed', err, { store: 'novus', method: 'getCategories' });
     throw err;
@@ -47,7 +44,7 @@ export async function getNovusCategories(env = {}) {
 }
 
 export async function getNovusProducts(categoryIdOrSlug, env = {}, categoriesTree = null) {
-  const storeId = env.NOVUS_STORE_ID || DEFAULT_STORE_ID;
+  const storeId = readStoreId(env);
 
   let categorySlug = categoryIdOrSlug;
   let categoryName = '';
@@ -73,21 +70,16 @@ export async function getNovusProducts(categoryIdOrSlug, env = {}, categoriesTre
   let hasMore = true;
 
   while (hasMore) {
-    const resp = await fetchWithTimeout(
-      `${ZAKAZ_BASE}/stores/${storeId}/categories/${categorySlug}/products/?page=${page}`,
-      { headers: NOVUS_HEADERS },
-      PRODUCTS_TIMEOUT_MS
-    );
+    const url = `${ZAKAZ_BASE}/stores/${storeId}/categories/${categorySlug}/products/?page=${page}`;
 
-    if (!resp.ok) {
-      const text = await resp.text();
-      const err = new Error(`Novus products API error: ${resp.status} - ${text.substring(0, 200)}`);
-      err.status = resp.status;
+    let data;
+    try {
+      data = await httpGetJson(url, { headers: NOVUS_HEADERS, timeoutMs: PRODUCTS_TIMEOUT_MS });
+    } catch (err) {
       logError('api_request_failed', err, { store: 'novus', method: 'getProducts', page });
       throw err;
     }
 
-    const data = await resp.json();
     const results = Array.isArray(data?.results)
       ? data.results
       : Array.isArray(data)
@@ -116,11 +108,13 @@ export async function getNovusProducts(categoryIdOrSlug, env = {}, categoriesTre
 }
 
 function normalizeNovusProduct(item, categoryName) {
-  const price = item?.price ? Number(item.price) / 100 : 0;
-  const oldPrice = item?.old_price ? Number(item.old_price) / 100 : null;
+  const hasPrice = item?.price !== null && item?.price !== undefined && item?.price !== '';
+  const hasOldPrice = item?.old_price !== null && item?.old_price !== undefined && item?.old_price !== '';
+  const price = hasPrice ? Number(item.price) / 100 : null;
+  const oldPrice = hasOldPrice ? Number(item.old_price) / 100 : null;
   let discount = null;
 
-  if (oldPrice && oldPrice > price) {
+  if (oldPrice !== null && price !== null && oldPrice > price) {
     discount = Math.round(((oldPrice - price) / oldPrice) * 100);
   } else if (item?.discount?.value) {
     discount = Number(item.discount.value) || null;

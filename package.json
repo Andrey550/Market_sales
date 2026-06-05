@@ -8,7 +8,7 @@
     "dev": "wrangler dev",
     "start": "wrangler dev",
     "test": "node --test tests/**/*.test.js",
-    "check": "node --check src/index.js && node --check src/page.js && node --check src/catalog-utils.js && node --check src/utils/fetch.js && node --check src/utils/cache.js && node --check src/utils/logger.js && node --check src/utils/retry.js && node --check src/providers/rpc-adapter.js && node --check src/providers/silpo.js && node --check src/providers/novus.js && node --check src/providers/fora.js",
+    "check": "node --check src/index.js && node --check src/page.js && node --check src/catalog-utils.js && node --check src/utils/http.js && node --check src/utils/cache.js && node --check src/utils/cors.js && node --check src/utils/logger.js && node --check src/utils/retry.js && node --check src/client/styles.js && node --check src/client/page-body.js && node --check src/client/script.js && node --check src/providers/registry.js && node --check src/providers/normalize.js && node --check src/providers/rpc-adapter.js && node --check src/providers/silpo.js && node --check src/providers/novus.js && node --check src/providers/fora.js",
     "deploy": "wrangler deploy"
   },
   "engines": {

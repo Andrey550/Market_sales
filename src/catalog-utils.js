@@ -21,6 +21,23 @@ function compareCategories(a, b) {
   return getCategoryTitle(a).localeCompare(getCategoryTitle(b), 'uk');
 }
 
+function buildCategoryItem(category) {
+  const title = getCategoryTitle(category);
+  const count = category?.itemsCount ?? category?.count ?? 0;
+
+  if (!title || count === 0) {
+    return null;
+  }
+
+  return {
+    id: category.id,
+    slug: category.slug ?? category.id,
+    title,
+    count,
+    parentId: category?.parentId ?? category?.parent_id ?? null,
+  };
+}
+
 export function flattenParentCategories(categories) {
   const list = Array.isArray(categories) ? categories : [];
   // Some providers return a flat category list with parent ids instead of a
@@ -54,50 +71,16 @@ export function flattenParentCategories(categories) {
 
   return (childrenByParent.get(ROOT_KEY) || [])
     .sort(compareCategories)
-    .map(category => {
-      const title = getCategoryTitle(category);
-      const count = category?.itemsCount ?? category?.count ?? 0;
-
-      if (!title || count === 0) {
-        return null;
-      }
-
-      return {
-        id: category.id,
-        slug: category.slug ?? category.id,
-        title,
-        count,
-        parentId: category?.parentId ?? category?.parent_id ?? null,
-      };
-    })
+    .map(buildCategoryItem)
     .filter(Boolean);
 }
 
-export function flattenNestedCategories(categories, depth = 0) {
-  if (depth > 0) {
-    return [];
-  }
-
+export function flattenNestedCategories(categories) {
   const list = Array.isArray(categories) ? categories : [];
 
   return [...list]
     .sort(compareCategories)
-    .map(category => {
-      const title = getCategoryTitle(category);
-      const count = category?.itemsCount ?? category?.count ?? 0;
-
-      if (!title || count === 0) {
-        return null;
-      }
-
-      return {
-        id: category.id,
-        slug: category.slug ?? category.id,
-        title,
-        count,
-        parentId: category?.parentId ?? category?.parent_id ?? null,
-      };
-    })
+    .map(buildCategoryItem)
     .filter(Boolean);
 }
 
