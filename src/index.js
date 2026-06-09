@@ -90,12 +90,16 @@ async function loadProductsForCategories(store, categories, env) {
 }
 
 function json(data, status = 200) {
+  const headers = {
+    'Content-Type': 'application/json; charset=utf-8',
+    ...corsHeaders,
+  };
+  if (status >= 400) {
+    headers['Cache-Control'] = 'no-store';
+  }
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      ...corsHeaders,
-    },
+    headers,
   });
 }
 
@@ -132,7 +136,7 @@ export default {
             'Content-Type': 'text/html; charset=utf-8',
             'X-Content-Type-Options': 'nosniff',
             'Referrer-Policy': 'strict-origin-when-cross-origin',
-            'Content-Security-Policy': "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self' https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'unsafe-eval'; connect-src 'self'; font-src https: data:",
+            'Content-Security-Policy': "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://web.telegram.org https://t.me; img-src 'self' https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'unsafe-eval' https://telegram.org; connect-src 'self' https:; font-src https: data:",
           },
         });
       }

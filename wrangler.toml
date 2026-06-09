@@ -1,6 +1,7 @@
 name = "websales"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
+account_id = "3e76a2c1ca6b976c66f57b7032e3fb05"
 
 [vars]
 SILPO_FILIAL_ID = "2028"

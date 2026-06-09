@@ -323,4 +323,61 @@ export const CLIENT_SCRIPT = `
       filtersEl.classList.add('collapsed');
       filterToggleEl.textContent = '▶ Фільтри';
     }
+
+    // === Telegram Mini App integration ===
+    (function initTelegram() {
+      const tg = window.Telegram && window.Telegram.WebApp;
+      if (!tg) return;
+
+      try {
+        tg.ready();
+        tg.expand();
+
+        const params = tg.themeParams || {};
+        const setVar = (name, value) => {
+          if (value) document.documentElement.style.setProperty(name, value);
+        };
+        setVar('--bg-primary', params.bg_color);
+        setVar('--bg-card', params.secondary_bg_color || params.bg_color);
+        setVar('--text-primary', params.text_color);
+        setVar('--text-secondary', params.hint_color);
+        setVar('--action-primary', params.button_color);
+        setVar('--action-primary-hover', params.button_color);
+        if (params.button_text_color) {
+          setVar('--action-primary-fg', params.button_text_color);
+        }
+
+        const headerColor = params.header_bg_color || params.bg_color;
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta && headerColor) meta.setAttribute('content', headerColor);
+
+        tg.setHeaderColor && tg.setHeaderColor(headerColor || 'bg_color');
+        tg.setBackgroundColor && tg.setBackgroundColor(params.bg_color || '#121315');
+
+        const back = tg.BackButton;
+        if (back) {
+          back.show();
+          back.onClick(function() { tg.close(); });
+        }
+
+        const main = tg.MainButton;
+        if (main) {
+          main.setText('Знайти товари');
+          main.show();
+          main.onClick(function() {
+            if (!state.loading) loadProducts();
+          });
+        }
+
+        tg.onEvent && tg.onEvent('themeChanged', function() {
+          const next = tg.themeParams || {};
+          setVar('--bg-primary', next.bg_color);
+          setVar('--bg-card', next.secondary_bg_color || next.bg_color);
+          setVar('--text-primary', next.text_color);
+          setVar('--text-secondary', next.hint_color);
+        });
+      } catch (err) {
+        console.error('Telegram WebApp init failed', err);
+      }
+    })();
 `;

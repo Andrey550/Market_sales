@@ -6,11 +6,13 @@ export const HTML_PAGE = `<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#121315">
   <title>WebSales · Система пошуку акцій</title>
   <style>${STYLES}</style>
 </head>
 <body>${PAGE_BODY}
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>${CLIENT_SCRIPT}</script>
 </body>
 </html>`;

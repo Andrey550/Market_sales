@@ -7,15 +7,20 @@ const API_CACHE_HEADERS = {
 };
 
 export async function withCache(request, ctx, fetcherFn, ttlSeconds = 900) {
-  const cache = await caches.open('websales-api-v1');
+  const cache = await caches.open('websales-api-v2');
   const cacheKey = new Request(request.url, { method: 'GET' });
 
   const cached = await cache.match(cacheKey);
   if (cached) {
     logInfo('cache_hit', { url: request.url });
-    const hitResponse = cached.clone();
-    hitResponse.headers.set('X-Cache', 'HIT');
-    return hitResponse;
+    return new Response(cached.body, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers: {
+        ...API_CACHE_HEADERS,
+        'X-Cache': 'HIT',
+      },
+    });
   }
 
   logInfo('cache_miss', { url: request.url });
